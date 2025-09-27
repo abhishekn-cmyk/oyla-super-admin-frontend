@@ -1,5 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from "@tanstack/react-query";
 import axios from "axios";
+import { toast } from "react-toastify";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -15,40 +16,28 @@ export interface SuccessStory {
 }
 
 // -------------------- HELPERS --------------------
+const getAuthToken = () => localStorage.getItem("token");
 
-// Get token from localStorage
-const getAuthToken = () => {
-  return localStorage.getItem("token"); // adjust key if needed
-};
-
-// Axios config with Authorization header
 const getConfig = () => ({
   headers: {
     Authorization: `Bearer ${getAuthToken()}`,
-    "Content-Type": "multipart/form-data", // for POST/PUT
+    "Content-Type": "multipart/form-data",
   },
 });
 
 // -------------------- API FUNCTIONS --------------------
-
-// Fetch all stories
 const fetchSuccessStories = async (): Promise<SuccessStory[]> => {
   const { data } = await axios.get(`${API_BASE_URL}/success`, {
-    headers: {
-      Authorization: `Bearer ${getAuthToken()}`,
-    },
+    headers: { Authorization: `Bearer ${getAuthToken()}` },
   });
-  console.log(data);
   return data;
 };
 
-// Create story
 const createSuccessStory = async (story: FormData): Promise<SuccessStory> => {
   const { data } = await axios.post(`${API_BASE_URL}/success`, story, getConfig());
   return data;
 };
 
-// Update story
 const updateSuccessStory = async ({
   id,
   story,
@@ -60,50 +49,62 @@ const updateSuccessStory = async ({
   return data;
 };
 
-// Delete story
 const deleteSuccessStory = async (id: string): Promise<void> => {
   await axios.delete(`${API_BASE_URL}/success/${id}`, {
-    headers: {
-      Authorization: `Bearer ${getAuthToken()}`,
-    },
+    headers: { Authorization: `Bearer ${getAuthToken()}` },
   });
 };
 
 // -------------------- REACT QUERY HOOKS --------------------
 
-export const useSuccessStories = () => {
-  return useQuery<SuccessStory[], Error>({
-    queryKey: ["successStories"],
-    queryFn: fetchSuccessStories,
-  });
-};
+// Fetch
+export const useSuccessStories = () =>
+  useQuery<SuccessStory[], Error>(
+    {
+      queryKey: ["successStories"],
+      queryFn: fetchSuccessStories,
+      onError: (err: Error) => toast.error(err.message || "Failed to fetch success stories"),
+    } as UseQueryOptions<SuccessStory[], Error>
+  );
 
+// Create
 export const useCreateSuccessStory = () => {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: createSuccessStory,
+
+  return useMutation<SuccessStory, Error, FormData>({
+    mutationFn: (story: FormData) => createSuccessStory(story),
     onSuccess: () => {
+      toast.success("Success story created!");
       queryClient.invalidateQueries({ queryKey: ["successStories"] });
     },
+    onError: (err: any) => toast.error(err.message || "Failed to create success story"),
   });
 };
 
+// Update
 export const useUpdateSuccessStory = () => {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: updateSuccessStory,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["successStories"] });
-    },
-  });
+ return useMutation<SuccessStory, Error, { id: string; story: FormData }>({
+  mutationFn: ({ id, story }) => updateSuccessStory({ id, story }),
+  onSuccess: () => {
+    toast.success("Success story updated!");
+    queryClient.invalidateQueries({ queryKey: ["successStories"] });
+  },
+  onError: (err: any) => toast.error(err.message || "Failed to update success story"),
+});
+
 };
 
+// Delete
 export const useDeleteSuccessStory = () => {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: deleteSuccessStory,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["successStories"] });
-    },
-  });
+  return useMutation<void, Error, string>({
+  mutationFn: (id: string) => deleteSuccessStory(id),
+  onSuccess: () => {
+    toast.success("Success story deleted!");
+    queryClient.invalidateQueries({ queryKey: ["successStories"] });
+  },
+  onError: (err: any) => toast.error(err.message || "Failed to delete success story"),
+});
+
 };

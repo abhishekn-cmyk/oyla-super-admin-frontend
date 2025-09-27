@@ -1,6 +1,6 @@
 import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import Sidebar from './components/sidebar/Sidebar';
-import Home from './pages/Home/Home';
+
 import Login from './pages/Auth/Login';
 import Users from "./pages/Users/Users";
 import { ToastContainer } from "react-toastify";
@@ -21,6 +21,8 @@ import Privacy from "./pages/Privacy/Privacy";
 import Settings from "./pages/Settings/Settings";
 import Orders from "./pages/Orders/Order";
 import type { ReactElement } from "react";
+// import MainDashboard from "./pages/Home/MainDashboard";
+import Home from "./pages/Home/Home";
 
 // ProtectedRoute component
 const ProtectedRoute = ({ children }: { children: ReactElement }) => {

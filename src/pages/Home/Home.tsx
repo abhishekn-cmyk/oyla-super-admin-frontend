@@ -96,7 +96,7 @@ export default function Home() {
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-4 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-4 sm:grid-cols-2 lg:grid-cols-4 gap-6" >
         {/* Pie Chart */}
         <div className="bg-white p-6 rounded-xl shadow-lg border h-80 transition hover:shadow-2xl">
           <h3 className="text-lg font-semibold mb-4 text-gray-700">Rewards by Type</h3>
