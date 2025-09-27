@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import Sidebar from './components/sidebar/Sidebar';
 import Home from './pages/Home/Home';
 import Login from './pages/Auth/Login';
@@ -20,9 +20,18 @@ import Program from "./pages/Program/Program";
 import Privacy from "./pages/Privacy/Privacy";
 import Settings from "./pages/Settings/Settings";
 import Orders from "./pages/Orders/Order";
+import type { ReactElement } from "react";
+
+// ProtectedRoute component
+const ProtectedRoute = ({ children }: { children: ReactElement }) => {
+  const token = localStorage.getItem("token");
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+};
 
 function App() {
-  
   const location = useLocation();
 
   // Show Sidebar only if NOT on login page
@@ -41,29 +50,149 @@ function App() {
         {/* Main content */}
         <div className="flex-1 bg-gray-100 p-4 md:p-8 overflow-x-hidden">
           <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/orders" element={<Orders />} />
-            <Route path="/users" element={<Users />} />
-            <Route path="/carousel" element={<Carousel />} />
-            <Route path="/success" element={<Success />} />
-            <Route path="/language" element={<Language />} />
-            <Route path="/freeze" element={<Freeze />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/subscription" element={<Subscription />} />
-            <Route path="/rewards" element={<Rewards />} />
-            <Route path="/userwallet" element={<UserWallet />} />
-            <Route path="/restarunt" element={<Restaurant />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/product" element={<Product />} />
-            <Route path="/program" element={<Program />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/settings" element={<Settings />} />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Home />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/orders"
+              element={
+                <ProtectedRoute>
+                  <Orders />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/users"
+              element={
+                <ProtectedRoute>
+                  <Users />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/carousel"
+              element={
+                <ProtectedRoute>
+                  <Carousel />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/success"
+              element={
+                <ProtectedRoute>
+                  <Success />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/language"
+              element={
+                <ProtectedRoute>
+                  <Language />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/freeze"
+              element={
+                <ProtectedRoute>
+                  <Freeze />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/contact"
+              element={
+                <ProtectedRoute>
+                  <Contact />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/subscription"
+              element={
+                <ProtectedRoute>
+                  <Subscription />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/rewards"
+              element={
+                <ProtectedRoute>
+                  <Rewards />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/userwallet"
+              element={
+                <ProtectedRoute>
+                  <UserWallet />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/restarunt"
+              element={
+                <ProtectedRoute>
+                  <Restaurant />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/cart"
+              element={
+                <ProtectedRoute>
+                  <Cart />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/product"
+              element={
+                <ProtectedRoute>
+                  <Product />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/program"
+              element={
+                <ProtectedRoute>
+                  <Program />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/privacy"
+              element={
+                <ProtectedRoute>
+                  <Privacy />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              }
+            />
+            {/* Login route is public */}
             <Route path="/login" element={<Login />} />
           </Routes>
         </div>
       </div>
 
-      <ToastContainer 
+      <ToastContainer
         position="top-right"
         autoClose={3000}
         hideProgressBar={false}
