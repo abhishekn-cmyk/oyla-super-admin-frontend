@@ -39,36 +39,28 @@ export default function Sidebar() {
     navigate(href);
   };
 
-  // Function to load user from localStorage
+  // Load user from localStorage
   useEffect(() => {
-  const loadUserFromStorage = () => {
-    const stored = localStorage.getItem("superadmin");
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        const sa = parsed.superadmin; // <--- access the nested object
-        setUser({
-          username: sa.username,
-          email: sa.email || "Unknown",
-          role: sa.role || "Role",
-        });
-      } catch (e) {
-        console.error("Failed to parse superadmin from localStorage", e);
+    const loadUserFromStorage = () => {
+      const stored = localStorage.getItem("superadmin");
+      if (stored) {
+        try {
+          const sa = JSON.parse(stored); // direct parsing
+          setUser({
+            username: sa.username,
+            email: sa.email || "Unknown",
+            role: sa.role || "Role",
+          });
+        } catch (e) {
+          console.error("Failed to parse superadmin from localStorage", e);
+        }
       }
-    }
-  };
+    };
 
-  loadUserFromStorage();
-
-  const handleStorageChange = () => loadUserFromStorage();
-  window.addEventListener("storage", handleStorageChange);
-
-  return () => {
-    window.removeEventListener("storage", handleStorageChange);
-  };
-}, []);
-
-  
+    loadUserFromStorage();
+    window.addEventListener("storage", loadUserFromStorage);
+    return () => window.removeEventListener("storage", loadUserFromStorage);
+  }, []);
 
   const menuItems: MenuItem[] = [
     { label: "Users", icon: <User size={20} />, href: "/users" },
@@ -103,7 +95,10 @@ export default function Sidebar() {
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
           {isExpanded && (
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
+            <div
+              className="flex items-center gap-2 cursor-pointer"
+              onClick={() => navigate("/")}
+            >
               <img src="/Group2.png" alt="Logo" className="h-10 w-auto object-contain" />
               <span className="text-white font-bold text-lg">Dashboard</span>
             </div>
@@ -126,21 +121,22 @@ export default function Sidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex flex-col flex-1 px-2">
+        <nav className="flex flex-col flex-1 px-2 mt-4 space-y-1">
           {menuItems.map((item) => (
             <button
               key={item.label}
               onClick={() => handleItemClick(item.label, item.href)}
               className={`
                 flex items-center gap-3 py-2 px-2 rounded-xl transition-all duration-200 w-full text-left
-                ${
-                  activeItem === item.label
-                    ? "bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg"
-                    : "hover:bg-gray-700 hover:translate-x-1"
+                ${activeItem === item.label
+                  ? "bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg"
+                  : "hover:bg-gray-700 hover:translate-x-1"
                 }
               `}
             >
-              <div className={`${activeItem === item.label ? "scale-110" : ""}`}>{item.icon}</div>
+              <div className={`${activeItem === item.label ? "scale-110" : ""}`}>
+                {item.icon}
+              </div>
               {(isExpanded || window.innerWidth < 768) && (
                 <span className={`font-medium ${activeItem === item.label ? "text-white" : "text-gray-200"}`}>
                   {item.label}
@@ -155,10 +151,12 @@ export default function Sidebar() {
           <div className="mt-auto pt-4 border-t border-gray-700">
             <div className="flex items-center gap-3 p-2">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                <span className="font-bold text-white">{user?.email?.charAt(0).toUpperCase()}</span>
+                <span className="font-bold text-white">
+                  {user.username?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || "U"}
+                </span>
               </div>
-              <div>
-                <p className="text-sm font-medium">{user?.email ?? ""}</p>
+              <div className="truncate">
+                <p className="text-sm font-medium truncate">{user.username || user.email}</p>
                 <p className="text-xs text-gray-400">{user.role}</p>
               </div>
             </div>
@@ -168,4 +166,3 @@ export default function Sidebar() {
     </div>
   );
 }
-
