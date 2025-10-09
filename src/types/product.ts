@@ -25,6 +25,7 @@ export interface IProduct {
   _id: string;
   name: string;
   tagline?: string;
+  taglines?:string[];
   description?: string;
   price: number;
   image?: string;
@@ -34,6 +35,9 @@ export interface IProduct {
   nutrition?: INutrition;
   ingredients?: string[];
   mealType?: MealType;
+  basePrice?:number;
+  costPrice?:number;
+  availableDays:string[];
   availableDates: string[]; // use string[] in frontend (ISO dates)
   category?: ProductCategory;
   createdAt?: string;

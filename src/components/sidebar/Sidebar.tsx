@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   User,
   Settings,
-  ShoppingCart,
+  
   CreditCard,
   Layers,
   Globe,
@@ -11,10 +11,15 @@ import {
   Phone,
   Award,
   Package,
-  Monitor,
+
+  Bell,
+  RectangleVertical,
+  RemoveFormattingIcon,
+  RulerDimensionLine,
+  ChartNoAxesGantt,
 } from "lucide-react";
 import { FiMenu, FiChevronLeft, FiX } from "react-icons/fi";
-import { GiCarousel } from "react-icons/gi";
+import { GiCarousel, GiDeliveryDrone } from "react-icons/gi";
 
 interface MenuItem {
   label: string;
@@ -27,6 +32,7 @@ export default function Sidebar() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [activeItem, setActiveItem] = useState("Home");
   const [user, setUser] = useState<{ username?: string; email?: string; role?: string } | null>(null);
+  const [notificationsCount, setNotificationsCount] = useState(0); // live unread count
 
   const navigate = useNavigate();
 
@@ -45,7 +51,7 @@ export default function Sidebar() {
       const stored = localStorage.getItem("superadmin");
       if (stored) {
         try {
-          const sa = JSON.parse(stored); // directly the object
+          const sa = JSON.parse(stored);
           setUser({
             username: sa.username || "Unknown",
             email: sa.email || "Unknown",
@@ -66,6 +72,30 @@ export default function Sidebar() {
     };
   }, []);
 
+  // 🔴 Listen for real-time notification updates
+  useEffect(() => {
+    const updateNotificationsCount = () => {
+      const savedNotifications = localStorage.getItem("notifications");
+      if (savedNotifications) {
+        const allNotifications = JSON.parse(savedNotifications) as { read?: boolean }[];
+        const unreadCount = allNotifications.filter((n) => !n.read).length;
+        setNotificationsCount(unreadCount);
+      } else {
+        setNotificationsCount(0);
+      }
+    };
+
+    // Listen for custom "notificationsUpdated" event
+    window.addEventListener("notificationsUpdated", updateNotificationsCount);
+
+    // Run once on mount
+    updateNotificationsCount();
+
+    return () => {
+      window.removeEventListener("notificationsUpdated", updateNotificationsCount);
+    };
+  }, []);
+
   const menuItems: MenuItem[] = [
     { label: "Users", icon: <User size={20} />, href: "/users" },
     { label: "Carousel", icon: <GiCarousel size={20} />, href: "/carousel" },
@@ -75,14 +105,17 @@ export default function Sidebar() {
     { label: "Contact Us", icon: <Phone size={20} />, href: "/contact" },
     { label: "Subscription", icon: <CreditCard size={20} />, href: "/subscription" },
     { label: "Rewards", icon: <Award size={20} />, href: "/rewards" },
-    { label: "User Wallet", icon: <CreditCard size={20} />, href: "/userwallet" },
+     {label:"Category Master", icon:<ChartNoAxesGantt size={20}/>,href:"/category"},
     { label: "Restaurant", icon: <Layers size={20} />, href: "/restarunt" },
-    { label: "Orders", icon: <User size={20} />, href: "/orders" },
-    { label: "Cart", icon: <ShoppingCart size={20} />, href: "/cart" },
+     { label: "Orders", icon: <User size={20} />, href: "/orders" },
+    {label:"Expenses",icon:<RectangleVertical size={20}/>, href:"/expenses"},
+    {label:"Revenue",icon:<RemoveFormattingIcon size={20}/>,href:"/revenue"},
     { label: "Product", icon: <Package size={20} />, href: "/product" },
-    { label: "Program", icon: <Monitor size={20} />, href: "/program" },
-    { label: "Privacy", icon: <Lock size={20} />, href: "/privacy" },
+    { label: "Delivery Partner", icon: <GiDeliveryDrone size={20} />, href: "/delivery" },
+    
     { label: "Settings", icon: <Settings size={20} />, href: "/settings" },
+    { label: "Notifications", icon: <Bell size={20} />, href: "/notifications" },
+    {label:"Policies",icon:<RulerDimensionLine size={20}/>, href:"/policies"}
   ];
 
   return (
@@ -97,15 +130,18 @@ export default function Sidebar() {
         `}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-700">
+        <div className="flex items-center justify-between  border-b border-gray-700">
           {isExpanded && (
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
+            <div
+              className="flex items-center gap-2 cursor-pointer"
+              onClick={() => navigate("/")}
+            >
               <img src="/Group2.png" alt="Logo" className="h-10 w-auto object-contain" />
               <span className="text-white font-bold text-lg truncate">Dashboard</span>
             </div>
           )}
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center">
             <button
               onClick={toggleMobileSidebar}
               className="p-2 rounded-lg hover:bg-gray-700 transition-colors focus:outline-none md:hidden"
@@ -122,38 +158,57 @@ export default function Sidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex flex-col flex-1 px-2 overflow-y-auto">
-          {menuItems.map((item) => (
-            <button
-              key={item.label}
-              onClick={() => handleItemClick(item.label, item.href)}
-              className={`
-                flex items-center gap-3 py-2 px-2 rounded-xl transition-all duration-200 w-full text-left
-                ${activeItem === item.label
-                  ? "bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg"
-                  : "hover:bg-gray-700 hover:translate-x-1"}
-              `}
-            >
-              <div className={`${activeItem === item.label ? "scale-110" : ""}`}>{item.icon}</div>
-              {(isExpanded || window.innerWidth < 768) && (
-                <span className={`font-medium truncate ${activeItem === item.label ? "text-white" : "text-gray-200"}`}>
-                  {item.label}
-                </span>
-              )}
-            </button>
-          ))}
-        </nav>
+       <nav className="flex flex-col flex-1 overflow-y-auto">
+  {menuItems.map((item) => {
+    const isNotifications = item.label === "Notifications";
+    return (
+      <button
+        key={item.label}
+        onClick={() => handleItemClick(item.label, item.href)}
+        className={`
+          flex items-center gap-2 py-2 px-2 rounded-lg transition-all duration-150 w-full text-left
+          ${activeItem === item.label
+            ? "bg-gradient-to-r from-blue-600 to-purple-600 shadow-lg"
+            : "hover:bg-gray-700 hover:translate-x-0.5"}
+        `}
+      >
+        <div className="relative flex-shrink-0">
+          {item.icon}
+          {isNotifications && notificationsCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center animate-pulse">
+              {notificationsCount}
+            </span>
+          )}
+        </div>
+        {(isExpanded || window.innerWidth < 768) && (
+          <span
+            className={`font-medium truncate ${
+              activeItem === item.label ? "text-white" : "text-gray-200"
+            }`}
+          >
+            {item.label}
+          </span>
+        )}
+      </button>
+    );
+  })}
+</nav>
+
 
         {/* User Section */}
         {(isExpanded || window.innerWidth < 768) && user && (
           <div className="mt-auto pt-4 border-t border-gray-700 p-2 flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
               <span className="font-bold text-white truncate">
-                {user.username?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || "U"}
+                {user.username?.charAt(0).toUpperCase() ||
+                  user.email?.charAt(0).toUpperCase() ||
+                  "U"}
               </span>
             </div>
             <div className="flex flex-col truncate">
-              <p className="text-sm font-medium truncate">{user.username || user.email}</p>
+              <p className="text-sm font-medium truncate">
+                {user.username || user.email}
+              </p>
               <p className="text-xs text-gray-400 truncate">{user.role}</p>
             </div>
           </div>

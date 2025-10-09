@@ -1,6 +1,6 @@
 // api/auth.ts
-import { type ISuperAdmin } from "../types/auth";
-
+import { type ISuperAdmin,type ISuperAdminPolicies } from "../types/auth";
+import axios from "axios";
 interface LoginResponse {
   token: string;
   superadmin: ISuperAdmin;
@@ -18,5 +18,22 @@ export const loginSuperAdmin = async (email: string, password: string): Promise<
 
   if (!res.ok) throw new Error(data.message || "Login failed");
 
+  return data;
+};
+
+
+
+const API_URL = import.meta.env.VITE_API_URL;
+
+export const getSuperAdminPolicies = async (id: string): Promise<ISuperAdminPolicies> => {
+  const { data } = await axios.get(`${API_URL}/admin/${id}/policies`);
+  return data;
+};
+
+export const updateSuperAdminPolicies = async (
+  id: string,
+  policies: ISuperAdminPolicies
+): Promise<ISuperAdminPolicies> => {
+  const { data } = await axios.put(`${API_URL}/admin/${id}/policies`, policies);
   return data;
 };

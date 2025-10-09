@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FiUser, FiLock, FiLogOut, FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { FiUser, FiLock, FiLogOut, FiChevronLeft, FiChevronRight, FiShield } from "react-icons/fi";
 import {
   useUpdateProfile,
   useUpdatePassword,
@@ -8,9 +8,10 @@ import {
 } from "../../hooks/useSuperadmin";
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
+import Privacy from "../Privacy/Privacy"; // Import your Privacy component
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState<"profile" | "password">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "password" | "privacy">("profile");
 
   // --- Profile form ---
   const { register: registerProfile, handleSubmit: handleSubmitProfile, reset: resetProfile } =
@@ -39,15 +40,20 @@ export default function Settings() {
   const handleLogout = () => {
     localStorage.removeItem("superadmin");
     localStorage.removeItem("token");
-    
     window.location.href = "/login";
   };
 
-  const handleNext = () => setActiveTab(activeTab === "profile" ? "password" : "profile");
-  const handlePrev = () => setActiveTab(activeTab === "password" ? "profile" : "password");
+  const handleNext = () => {
+    if (activeTab === "profile") setActiveTab("password");
+    else if (activeTab === "password") setActiveTab("privacy");
+  };
+  const handlePrev = () => {
+    if (activeTab === "privacy") setActiveTab("password");
+    else if (activeTab === "password") setActiveTab("profile");
+  };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-gray-50">
+    <div className="bg-gray-50">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
@@ -81,10 +87,21 @@ export default function Settings() {
         >
           <FiLock /> Update Password
         </button>
+        <button
+          onClick={() => setActiveTab("privacy")}
+          className={`flex items-center gap-2 px-4 py-2 font-medium transition-colors ${
+            activeTab === "privacy"
+              ? "border-b-2 border-blue-600 text-blue-600"
+              : "text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          <FiShield /> Privacy
+        </button>
       </div>
 
       {/* Tab Contents */}
       <div className="bg-white p-6 rounded-lg shadow-sm relative">
+        {/* Profile Tab */}
         {activeTab === "profile" && (
           <form
             onSubmit={handleSubmitProfile((data) => updateProfile(data))}
@@ -133,6 +150,7 @@ export default function Settings() {
           </form>
         )}
 
+        {/* Password Tab */}
         {activeTab === "password" && (
           <form onSubmit={handleSubmitPassword((data) => updatePassword(data))} className="space-y-4">
             <div>
@@ -161,6 +179,13 @@ export default function Settings() {
                 <FiChevronLeft /> Prev
               </button>
               <button
+                type="button"
+                onClick={handleNext}
+                className="flex items-center gap-2 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+              >
+                Next <FiChevronRight />
+              </button>
+              <button
                 type="submit"
                 disabled={isPasswordUpdating}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
@@ -170,6 +195,9 @@ export default function Settings() {
             </div>
           </form>
         )}
+
+        {/* Privacy Tab */}
+        {activeTab === "privacy" && <Privacy />}
       </div>
     </div>
   );

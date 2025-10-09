@@ -23,6 +23,12 @@ import Orders from "./pages/Orders/Order";
 import type { ReactElement } from "react";
 // import MainDashboard from "./pages/Home/MainDashboard";
 import Home from "./pages/Home/Home";
+import Notifications from "./pages/Notifications/Notifications";
+import Expenses from "./pages/Expenses/Expenses";
+import Revenue from "./pages/Revenue/Revenue";
+import Policies from "./pages/Policies/Policies";
+import Category from "./pages/Category/Category";
+import Delivery from "./pages/Delivery/Delivery";
 
 // ProtectedRoute component
 const ProtectedRoute = ({ children }: { children: ReactElement }) => {
@@ -141,6 +147,39 @@ function App() {
               }
             />
             <Route
+              path="/delivery"
+              element={
+                <ProtectedRoute>
+                  <Delivery />
+                </ProtectedRoute>
+              }
+            />
+           
+            <Route
+              path="/notifications"
+              element={
+                <ProtectedRoute>
+                  <Notifications />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/revenue"
+              element={
+                <ProtectedRoute>
+                  <Revenue />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/expenses"
+              element={
+                <ProtectedRoute>
+                  <Expenses />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/restarunt"
               element={
                 <ProtectedRoute>
@@ -161,6 +200,23 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Product />
+                </ProtectedRoute>
+              }
+            />
+           
+            <Route
+              path="/policies"
+              element={
+                <ProtectedRoute>
+                  <Policies />
+                </ProtectedRoute>
+              }
+            />
+             <Route
+              path="/category"
+              element={
+                <ProtectedRoute>
+                  <Category />
                 </ProtectedRoute>
               }
             />

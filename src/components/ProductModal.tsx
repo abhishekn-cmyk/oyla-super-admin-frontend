@@ -1,15 +1,19 @@
 import { useState, useEffect } from "react";
 import type { IRestaurant } from "../types/restarunt";
-import type {  MealType, ProductCategory } from "../types/product";
+import type { MealType, ProductCategory } from "../types/product";
 import { useProducts } from "../hooks/useProduct";
 import { toast } from "react-toastify";
-// IProduct,
+
 interface Props {
   restaurant: IRestaurant;
   type: "menu" | "popular";
   onClose: () => void;
   onAdd: (args: { restaurantId: string; data: FormData }) => Promise<any>;
 }
+
+const CATEGORY_OPTIONS: ProductCategory[] = ["main","breakfast","snack","salad","dessert","beverage"];
+const MEALTYPE_OPTIONS: MealType[] = ["veg","non-veg","vegan","breakfast","lunch","dinner","snack","soup","salad","biriyani","main-meal"];
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export default function ProductModal({ restaurant, type, onClose, onAdd }: Props) {
   const { data: products = [] } = useProducts();
@@ -21,7 +25,7 @@ export default function ProductModal({ restaurant, type, onClose, onAdd }: Props
   const [price, setPrice] = useState<number>(0);
   const [category, setCategory] = useState<ProductCategory>("main");
   const [mealType, setMealType] = useState<MealType>("veg");
-  const [availableDates, setAvailableDates] = useState<string[]>([]);
+  const [availableDays, setAvailableDays] = useState<string[]>([]);
   const [ingredients, setIngredients] = useState<string[]>([]);
   const [nutritionFat, setNutritionFat] = useState("");
   const [nutritionCarb, setNutritionCarb] = useState("");
@@ -39,15 +43,13 @@ export default function ProductModal({ restaurant, type, onClose, onAdd }: Props
         setPrice(product.price);
         setCategory(product.category || "main");
         setMealType(product.mealType || "veg");
-        setAvailableDates(
-          product.availableDates?.map((d) => new Date(d).toISOString().slice(0, 10)) || []
-        );
+        setAvailableDays(product.availableDays || []);
         setIngredients(product.ingredients || []);
         setNutritionFat(product.nutrition?.fat || "");
         setNutritionCarb(product.nutrition?.carbohydrate || "");
         setNutritionProtein(product.nutrition?.protein || "");
         setNutritionCalories(product.nutrition?.calories || "");
-        setImage(null); // user can upload new image
+        setImage(null);
       }
     } else {
       setName("");
@@ -55,7 +57,7 @@ export default function ProductModal({ restaurant, type, onClose, onAdd }: Props
       setPrice(0);
       setCategory("main");
       setMealType("veg");
-      setAvailableDates([]);
+      setAvailableDays([]);
       setIngredients([]);
       setNutritionFat("");
       setNutritionCarb("");
@@ -74,9 +76,8 @@ export default function ProductModal({ restaurant, type, onClose, onAdd }: Props
     formData.append("description", description);
     formData.append("price", price.toString());
     formData.append("category", category);
-   formData.append("mealType", mealType);  // => "lunch" becomes '"lunch"'
-
-    formData.append("availableDates", JSON.stringify(availableDates));
+    formData.append("mealType", mealType);
+    formData.append("availableDays", JSON.stringify(availableDays));
     formData.append("ingredients", JSON.stringify(ingredients));
     formData.append(
       "nutrition",
@@ -99,16 +100,6 @@ export default function ProductModal({ restaurant, type, onClose, onAdd }: Props
     }
   };
 
-  // --- Available dates handlers ---
-  const handleDateChange = (value: string, index: number) => {
-    const dates = [...availableDates];
-    dates[index] = value;
-    setAvailableDates(dates);
-  };
-  const addDateField = () => setAvailableDates([...availableDates, ""]);
-  const removeDateField = (index: number) =>
-    setAvailableDates(availableDates.filter((_, i) => i !== index));
-
   // --- Ingredients handlers ---
   const handleIngredientChange = (value: string, index: number) => {
     const ing = [...ingredients];
@@ -118,6 +109,15 @@ export default function ProductModal({ restaurant, type, onClose, onAdd }: Props
   const addIngredientField = () => setIngredients([...ingredients, ""]);
   const removeIngredientField = (index: number) =>
     setIngredients(ingredients.filter((_, i) => i !== index));
+
+  // --- Available Days handlers ---
+  const toggleDay = (day: string) => {
+    if (availableDays.includes(day)) {
+      setAvailableDays(availableDays.filter(d => d !== day));
+    } else {
+      setAvailableDays([...availableDays, day]);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -162,64 +162,64 @@ export default function ProductModal({ restaurant, type, onClose, onAdd }: Props
           className="w-full border px-3 py-2 rounded mb-3"
         />
 
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value as ProductCategory)}
-          className="w-full border px-3 py-2 rounded mb-3"
-        >
-          <option value="main">Main</option>
-          <option value="breakfast">Breakfast</option>
-          <option value="snack">Snack</option>
-          <option value="salad">Salad</option>
-          <option value="dessert">Dessert</option>
-          <option value="beverage">Beverage</option>
-        </select>
-
-        <select
-          value={mealType}
-          onChange={(e) => setMealType(e.target.value as MealType)}
-          className="w-full border px-3 py-2 rounded mb-3"
-        >
-          <option value="veg">Veg</option>
-          <option value="non-veg">Non-Veg</option>
-          <option value="vegan">Vegan</option>
-          <option value="breakfast">Breakfast</option>
-          <option value="lunch">Lunch</option>
-          <option value="dinner">Dinner</option>
-          <option value="snack">Snack</option>
-          <option value="soup">Soup</option>
-          <option value="salad">Salad</option>
-          <option value="biriyani">Biriyani</option>
-          <option value="main-meal">Main Meal</option>
-        </select>
-
-        {/* Available Dates */}
+        {/* Category Radios */}
         <div className="mb-3">
-          <p className="font-semibold mb-1">Available Dates:</p>
-          {availableDates.map((date, i) => (
-            <div key={i} className="flex gap-2 mb-1">
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => handleDateChange(e.target.value, i)}
-                className="border px-2 py-1 rounded"
-              />
-              <button
-                type="button"
-                onClick={() => removeDateField(i)}
-                className="bg-red-500 text-white px-2 rounded"
-              >
-                Remove
-              </button>
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={addDateField}
-            className="bg-blue-600 text-white px-3 py-1 rounded mt-1"
-          >
-            Add Date
-          </button>
+          <p className="font-semibold mb-1">Category:</p>
+          <div className="flex flex-wrap gap-3">
+            {CATEGORY_OPTIONS.map((cat) => (
+              <label key={cat} className="inline-flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="category"
+                  value={cat}
+                  checked={category === cat}
+                  onChange={() => setCategory(cat)}
+                  className="form-radio h-4 w-4 text-blue-600"
+                />
+                <span className="text-sm">{cat.charAt(0).toUpperCase() + cat.slice(1)}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* MealType Radios */}
+        <div className="mb-3">
+          <p className="font-semibold mb-1">Meal Type:</p>
+          <div className="flex flex-wrap gap-3">
+            {MEALTYPE_OPTIONS.map((mt) => (
+              <label key={mt} className="inline-flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="mealType"
+                  value={mt}
+                  checked={mealType === mt}
+                  onChange={() => setMealType(mt)}
+                  className="form-radio h-4 w-4 text-blue-600"
+                />
+                <span className="text-sm">{mt.charAt(0).toUpperCase() + mt.slice(1)}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Available Days */}
+        <div className="mb-3">
+          <label className="block font-medium mb-1">Available Days:</label>
+          <div className="flex flex-wrap gap-2">
+            {DAYS.map((day) => (
+              <label key={day} className={`cursor-pointer px-3 py-1 rounded-lg border ${
+                availableDays.includes(day) ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-700"
+              }`}>
+                <input
+                  type="checkbox"
+                  checked={availableDays.includes(day)}
+                  onChange={() => toggleDay(day)}
+                  className="hidden"
+                />
+                {day}
+              </label>
+            ))}
+          </div>
         </div>
 
         {/* Ingredients */}
@@ -231,7 +231,7 @@ export default function ProductModal({ restaurant, type, onClose, onAdd }: Props
                 type="text"
                 value={ing}
                 onChange={(e) => handleIngredientChange(e.target.value, i)}
-                className="border px-2 py-1 rounded"
+                className="border px-2 py-1 rounded flex-1"
               />
               <button
                 type="button"

@@ -2,13 +2,11 @@
 import { useUsers } from "../../hooks/user";
 import { useGetAllRewards } from "../../hooks/useReward";
 import { useGetOrders } from "../../hooks/useorder";
-import { useGetSubscriptions } from "../../hooks/useSubscription";
 import { useProducts } from "../../hooks/useProduct";
 import { useRestaurants } from "../../hooks/useRestarunt";
-import { useGetFullCart } from "../../hooks/useCart";
-import { FiUsers, FiGift, FiShoppingCart, FiPackage, FiBox, FiCoffee } from "react-icons/fi";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Legend } from "recharts";
 import { useNavigate } from "react-router-dom";
+import { FiUsers, FiGift, FiShoppingCart, FiPackage, FiBox, FiCoffee } from "react-icons/fi";
+import  { useGetSubscriptions } from "../../hooks/useSubscription";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -17,12 +15,11 @@ export default function Home() {
   const { users = [] } = useUsers();
   const { data: rewards = [], isLoading: rewardsLoading } = useGetAllRewards();
   const { data: orders = [], isLoading: ordersLoading } = useGetOrders();
-  const { data: subscriptions = [], isLoading: subsLoading } = useGetSubscriptions();
   const { data: products = [], isLoading: productsLoading } = useProducts();
   const { data: restaurants = [], isLoading: restaurantsLoading } = useRestaurants();
-  const { data: cart = [], isLoading: cartLoading } = useGetFullCart();
+  const {data:subs=[]}=useGetSubscriptions();
 
-  const loading = rewardsLoading || ordersLoading || subsLoading || productsLoading || restaurantsLoading || cartLoading;
+  const loading = rewardsLoading || ordersLoading || productsLoading || restaurantsLoading;
   if (loading) return <p className="p-6 text-center text-gray-600">Loading dashboard...</p>;
 
   // Stats cards
@@ -30,54 +27,17 @@ export default function Home() {
     { title: "Users", value: users.length, icon: <FiUsers className="w-6 h-6 text-white" />, color: "bg-blue-500", link: "/users" },
     { title: "Rewards", value: rewards.length, icon: <FiGift className="w-6 h-6 text-white" />, color: "bg-green-500", link: "/rewards" },
     { title: "Orders", value: orders.length, icon: <FiShoppingCart className="w-6 h-6 text-white" />, color: "bg-yellow-500", link: "/orders" },
-    { title: "Subscriptions", value: subscriptions.length, icon: <FiPackage className="w-6 h-6 text-white" />, color: "bg-purple-500", link: "/subscription" },
     { title: "Products", value: products.length, icon: <FiBox className="w-6 h-6 text-white" />, color: "bg-pink-500", link: "/product" },
     { title: "Restaurants", value: restaurants.length, icon: <FiCoffee className="w-6 h-6 text-white" />, color: "bg-red-500", link: "/restarunt" },
-    { title: "Cart Items", value: cart.length, icon: <FiShoppingCart className="w-6 h-6 text-white" />, color: "bg-indigo-500", link: "/cart" },
+    { title: "Subscriptions", value: subs.length, icon: <FiPackage className="w-6 h-6 text-white" />, color: "bg-purple-500", link: "/subscription" },
   ];
-
-  // Pie chart: Rewards by Type
-  const rewardTypesData = [
-    { name: "Percentage", value: rewards.filter(r => r.type === "percentage").length },
-    { name: "Fixed", value: rewards.filter(r => r.type === "fixed").length },
-    { name: "Points", value: rewards.filter(r => r.type === "points").length },
-  ];
-  const pieColors = ["#34D399", "#60A5FA", "#FBBF24"];
-
-  // Bar chart: Orders by Month
-  const currentYear = new Date().getFullYear();
-  const ordersByMonth = Array.from({ length: 12 }, (_, i) => {
-    const monthOrders = orders.filter(o => {
-      const date = new Date(o.createdAt);
-      return date.getMonth() === i && date.getFullYear() === currentYear;
-    }).length;
-    return { month: new Date(0, i).toLocaleString("default", { month: "short" }), orders: monthOrders };
-  });
-
-  // Bar chart: Products by Category
-  const productCategoriesData = products.reduce<Record<string, number>>((acc, p) => {
-    acc[p.category || "Other"] = (acc[p.category || "Other"] || 0) + 1;
-    return acc;
-  }, {});
-  const productsByCategory = Object.entries(productCategoriesData).map(([name, value]) => ({ name, value }));
-
-  // Bar chart: Users by Month Joined
-  const usersByMonth = Array.from({ length: 12 }, (_, i) => {
-    const monthUsers = users.filter(u => {
-      if (!u.createdAt) return false;
-      const date = new Date(u.createdAt);
-      return date.getMonth() === i && date.getFullYear() === currentYear;
-    }).length;
-
-    return { month: new Date(0, i).toLocaleString("default", { month: "short" }), users: monthUsers };
-  });
 
   return (
     <div className="bg-gray-50 md:p-10">
       <h1 className="text-3xl md:text-4xl font-bold mb-8 text-gray-900">SuperAdmin Dashboard</h1>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-4 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+      <div className="grid grid-cols-4 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map(stat => (
           <div
             key={stat.title}
@@ -93,74 +53,6 @@ export default function Home() {
             </div>
           </div>
         ))}
-      </div>
-
-      {/* Charts Section */}
-      <div className="grid grid-cols-4 sm:grid-cols-2 lg:grid-cols-4 gap-6" >
-        {/* Pie Chart */}
-        <div className="bg-white p-6 rounded-xl shadow-lg border h-80 transition hover:shadow-2xl">
-          <h3 className="text-lg font-semibold mb-4 text-gray-700">Rewards by Type</h3>
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={rewardTypesData}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius={60}
-                label
-              >
-                {rewardTypesData.map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Orders by Month */}
-        <div className="bg-white p-6 rounded-xl shadow-lg border h-80 transition hover:shadow-2xl">
-          <h3 className="text-lg font-semibold mb-4 text-gray-700">Orders by Month</h3>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={ordersByMonth}>
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="orders" fill="#3B82F6" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Products by Category */}
-        <div className="bg-white p-6 rounded-xl shadow-lg border h-80 transition hover:shadow-2xl">
-          <h3 className="text-lg font-semibold mb-4 text-gray-700">Products by Category</h3>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={productsByCategory}>
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="value" fill="#F59E0B" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Users by Month */}
-        <div className="bg-white p-6 rounded-xl shadow-lg border h-80 transition hover:shadow-2xl">
-          <h3 className="text-lg font-semibold mb-4 text-gray-700">Users by Month Joined</h3>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={usersByMonth}>
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="users" fill="#10B981" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
       </div>
     </div>
   );

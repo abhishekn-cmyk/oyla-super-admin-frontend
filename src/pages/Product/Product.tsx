@@ -1,12 +1,17 @@
 import { useState } from "react";
-import { useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct } from "../../hooks/useProduct";
+import {
+  useProducts,
+  useCreateProduct,
+  useUpdateProduct,
+  useDeleteProduct,
+} from "../../hooks/useProduct";
 import type { IProduct, ProductCategory, MealType, INutrition } from "../../types/product";
-import { FiEdit, FiTrash, FiPlus, FiX, FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { FiEdit, FiTrash, FiPlus, FiX } from "react-icons/fi";
 import { toast } from "react-toastify";
 
 export default function Product() {
   // --- Queries & Mutations ---
-  const { data: products = [],isLoading } = useProducts();
+  const { data: products = [] } = useProducts();
   const createProductMutation = useCreateProduct();
   const updateProductMutation = useUpdateProduct();
   const deleteProductMutation = useDeleteProduct();
@@ -21,15 +26,16 @@ export default function Product() {
   const [editingProduct, setEditingProduct] = useState<IProduct | null>(null);
 
   const [name, setName] = useState("");
-  const [tagline, setTagline] = useState("");
+  const [taglines, setTaglines] = useState<string[]>([]); // now an array
   const [description, setDescription] = useState("");
-  const [price, setPrice] = useState<number>(0);
+  const [cost, setCost] = useState<number>(0);
+  const [basePrice, setBasePrice] = useState<number>(0);
   const [category, setCategory] = useState<ProductCategory>("main");
   const [features, setFeatures] = useState("");
   const [mealType, setMealType] = useState<MealType>("veg");
   const [nutrition, setNutrition] = useState<INutrition>({});
   const [ingredients, setIngredients] = useState<string[]>([]);
-  const [availableDates, setAvailableDates] = useState<string[]>([]);
+  const [availableDays, setAvailableDays] = useState<string[]>([]);
   const [image, setImage] = useState<File | null>(null);
 
   // --- Modal Handlers ---
@@ -38,15 +44,16 @@ export default function Product() {
     if (product) {
       setEditingProduct(product);
       setName(product.name);
-      setTagline(product.tagline || "");
+      setTaglines(Array.isArray(product.taglines) ? product.taglines : product.taglines|| []);
       setDescription(product.description || "");
-      setPrice(product.price);
+      setCost(product.costPrice || 0);
+      setBasePrice(product.basePrice || 0);
       setCategory(product.category || "main");
       setFeatures(product.features || "");
       setMealType(product.mealType || "veg");
       setNutrition(product.nutrition || {});
       setIngredients(product.ingredients || []);
-      setAvailableDates(product.availableDates || []);
+      setAvailableDays(product.availableDays || []);
       setImage(null);
     } else resetForm();
   };
@@ -59,15 +66,16 @@ export default function Product() {
   const resetForm = () => {
     setEditingProduct(null);
     setName("");
-    setTagline("");
+    setTaglines([]);
     setDescription("");
-    setPrice(0);
+    setCost(0);
+    setBasePrice(0);
     setCategory("main");
     setFeatures("");
     setMealType("veg");
     setNutrition({});
     setIngredients([]);
-    setAvailableDates([]);
+    setAvailableDays([]);
     setImage(null);
   };
 
@@ -77,25 +85,32 @@ export default function Product() {
   const updateIngredient = (value: string, i: number) =>
     setIngredients(ingredients.map((ing, idx) => (idx === i ? value : ing)));
 
-  // --- Available Dates ---
-  const addDate = () => setAvailableDates([...availableDates, ""]);
-  const removeDate = (i: number) => setAvailableDates(availableDates.filter((_, idx) => idx !== i));
-  const updateDate = (value: string, i: number) =>
-    setAvailableDates(availableDates.map((d, idx) => (idx === i ? value : d)));
+  // --- Available Days ---
+  const toggleDay = (day: string) => {
+    setAvailableDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+    );
+  };
+
+  // --- Taglines ---
+  const handleTaglineChange = (value: string) => {
+    setTaglines(value.split(",").map(t => t.trim()).filter(t => t));
+  };
 
   // --- Submit ---
   const handleSubmit = async () => {
     const formData = new FormData();
     formData.append("name", name);
-    formData.append("tagline", tagline);
+    formData.append("taglines", JSON.stringify(taglines)); // send array
     formData.append("description", description);
-    formData.append("price", price.toString());
+    formData.append("costPrice", cost.toString());
+    formData.append("basePrice", basePrice.toString());
     formData.append("category", category);
     formData.append("features", features);
     formData.append("mealType", mealType);
     formData.append("nutrition", JSON.stringify(nutrition));
     formData.append("ingredients", JSON.stringify(ingredients));
-    formData.append("availableDates", JSON.stringify(availableDates));
+    formData.append("availableDays", JSON.stringify(availableDays));
     if (image) formData.append("image", image);
 
     try {
@@ -127,80 +142,18 @@ export default function Product() {
     }
   };
 
-  const totalProducts = products.length;
-  const vegProducts = products.filter(p => p.mealType === "dinner").length;
-  const nonVegProducts = products.filter(p => p.mealType === "lunch").length;
-  const veganProducts = products.filter(p => p.mealType === "breakfast").length;
-
   return (
-    <div className=" bg-gray-50 p-4 md:p-6">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-4 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-2">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 transition-all hover:shadow-md">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm md:text-base text-gray-600 font-medium">Total Products</p>
-              <p className="text-2xl md:text-3xl font-bold text-gray-900 mt-1">{totalProducts}</p>
-            </div>
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <FiPlus className="text-blue-600 text-xl" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 transition-all hover:shadow-md">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm md:text-base text-gray-600 font-medium">Dinner Products</p>
-              <p className="text-2xl md:text-3xl font-bold text-gray-900 mt-1">{vegProducts}</p>
-            </div>
-            <div className="bg-green-50 p-3 rounded-lg">
-              <span className="text-green-600 text-xl font-bold">D</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 transition-all hover:shadow-md">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm md:text-base text-gray-600 font-medium">Lunch Products</p>
-              <p className="text-2xl md:text-3xl font-bold text-gray-900 mt-1">{nonVegProducts}</p>
-            </div>
-            <div className="bg-orange-50 p-3 rounded-lg">
-              <span className="text-orange-600 text-xl font-bold">L</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 transition-all hover:shadow-md">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm md:text-base text-gray-600 font-medium">Breakfast Products</p>
-              <p className="text-2xl md:text-3xl font-bold text-gray-900 mt-1">{veganProducts}</p>
-            </div>
-            <div className="bg-purple-50 p-3 rounded-lg">
-              <span className="text-purple-600 text-xl font-bold">B</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Header and Add Button */}
+    <div className="bg-gray-50 p-4 md:p-6">
+      {/* Header */}
       <div className="flex justify-between items-center mb-6">
-  <div>
-    <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Product Management</h1>
-    <p className="text-gray-600 mt-1">Manage your products and inventory</p>
-  </div>
-
-  <button
-    onClick={() => openModal()}
-    className="bg-blue-600 text-white px-4 py-2 md:px-6 md:py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 font-medium shadow-sm hover:shadow-md"
-  >
-    <FiPlus className="text-lg" />
-    Add Product
-  </button>
-</div>
-
+        <h1 className="text-2xl font-bold text-gray-900">Product Management</h1>
+        <button
+          onClick={() => openModal()}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+        >
+          <FiPlus /> Add Product
+        </button>
+      </div>
 
       {/* Product Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -210,378 +163,149 @@ export default function Product() {
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Tagline</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Meal Type</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Category</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {paginatedProducts.map((p) => (
-                <tr key={p._id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <img
-                      src={p.image ? `${import.meta.env.VITE_API_URL}/${p.image}` : "/default-user-icon.png"}
-                      alt={p.name}
-                      className="w-12 h-12 md:w-16 md:h-16 object-cover rounded-lg border border-gray-200"
-                    />
-                  </td>
+                <tr key={p._id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900">{p.name}</div>
+                    <img src={p.image ? `${import.meta.env.VITE_API_URL}/${p.image}` : "/default-user-icon.png"} alt={p.name} className="w-12 h-12 object-cover rounded-lg"/>
                   </td>
-                  <td className="px-4 py-3">
-                    <span className="font-semibold text-green-600">${p.price}</span>
-                  </td>
-                  <td className="px-4 py-3 hidden lg:table-cell">
-                    <span className="text-gray-600 text-sm line-clamp-1">{p.tagline}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      p.mealType === 'veg' ? 'bg-green-100 text-green-800' :
-                      p.mealType === 'non-veg' ? 'bg-red-100 text-red-800' :
-                      'bg-purple-100 text-purple-800'
-                    }`}>
-                      {p.mealType}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 hidden md:table-cell">
-                    <span className="text-gray-600 capitalize">{p.category}</span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-right">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => openModal(p)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Edit product"
-                      >
-                        <FiEdit className="text-lg" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(p._id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Delete product"
-                      >
-                        <FiTrash className="text-lg" />
-                      </button>
-                    </div>
+                  <td className="px-4 py-3">{p.name}</td>
+                  <td className="px-4 py-3">${p.costPrice}</td>
+                  <td className="px-4 py-3">{p.mealType}</td>
+                  <td className="px-4 py-3">{p.category}</td>
+                  <td className="px-4 py-3 text-right">
+                    <button onClick={() => openModal(p)} className="text-blue-600 mr-2"><FiEdit /></button>
+                    <button onClick={() => handleDelete(p._id)} className="text-red-600"><FiTrash /></button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-
-        {paginatedProducts.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-gray-400 text-6xl mb-4">🍽️</div>
-            <p className="text-gray-500 text-lg">No products found</p>
-            <p className="text-gray-400 mt-1">Get started by adding your first product</p>
-          </div>
-        )}
       </div>
 
       {/* Pagination */}
-      {products.length > 0 && (
-        <div className="flex flex-col sm:flex-row justify-between items-end gap-4 mt-6">
-          <div className="text-sm text-gray-600">
-            Showing <span className="font-semibold">{(page - 1) * pageSize + 1}</span> to{" "}
-            <span className="font-semibold">{Math.min(page * pageSize, products.length)}</span> of{" "}
-            <span className="font-semibold">{products.length}</span> products
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              disabled={page === 1}
-              onClick={() => setPage(page - 1)}
-              className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <FiChevronLeft className="text-lg" />
-            </button>
-            <div className="flex gap-1">
-              {Array.from({ length: Math.ceil(products.length / pageSize) }, (_, i) => (
-                <button
-                  key={i + 1}
-                  onClick={() => setPage(i + 1)}
-                  className={`w-10 h-10 rounded-lg border transition-colors ${
-                    page === i + 1
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-            <button
-              disabled={page === Math.ceil(products.length / pageSize)}
-              onClick={() => setPage(page + 1)}
-              className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <FiChevronRight className="text-lg" />
-            </button>
-          </div>
-        </div>
-      )}
+      <div className="flex justify-end mt-4 gap-2">
+        <button disabled={page === 1} onClick={() => setPage(page - 1)} className="px-2 py-1 border rounded">Prev</button>
+        <span className="px-2 py-1">{page}</span>
+        <button disabled={page === Math.ceil(products.length / pageSize)} onClick={() => setPage(page + 1)} className="px-2 py-1 border rounded">Next</button>
+      </div>
 
       {/* Modal */}
       {isOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900">
-                {editingProduct ? "Edit Product" : "Add New Product"}
-              </h2>
-              <button
-                onClick={closeModal}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <FiX className="text-xl text-gray-500" />
-              </button>
+          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">{editingProduct ? "Edit Product" : "Add Product"}</h2>
+              <button onClick={closeModal}><FiX /></button>
             </div>
 
-            {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Left Column */}
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Product Name</label>
-                    <input
-                      type="text"
-                      placeholder="Enter product name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                    />
-                  </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Name */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Product Name</label>
+                <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full border rounded px-3 py-2"/>
+              </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Tagline</label>
-                    <input
-                      type="text"
-                      placeholder="Enter catchy tagline"
-                      value={tagline}
-                      onChange={(e) => setTagline(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                    <textarea
-                      placeholder="Enter product description"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      rows={3}
-                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-vertical"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Price ($)</label>
-                      <input
-                        type="number"
-                        placeholder="0.00"
-                        value={price}
-                        onChange={(e) => setPrice(Number(e.target.value))}
-                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                      <select
-                        value={category}
-                        onChange={(e) => setCategory(e.target.value as ProductCategory)}
-                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                      >
-                        <option value="main">Main Course</option>
-                        <option value="breakfast">Breakfast</option>
-                        <option value="snack">Snack</option>
-                        <option value="salad">Salad</option>
-                        <option value="dessert">Dessert</option>
-                        <option value="beverage">Beverage</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Features</label>
-                    <input
-                      type="text"
-                      placeholder="Key features separated by commas"
-                      value={features}
-                      onChange={(e) => setFeatures(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                    />
-                  </div>
+              {/* Taglines */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Taglines (comma separated)</label>
+                <input type="text" value={taglines.join(",")} onChange={(e) => handleTaglineChange(e.target.value)} className="w-full border rounded px-3 py-2"/>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {taglines.map((t,i)=> <span key={i} className="bg-blue-100 text-blue-700 px-2 py-1 rounded">{t}</span>)}
                 </div>
+              </div>
 
-                {/* Right Column */}
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Meal Type</label>
-                    <select
-                      value={mealType}
-                      onChange={(e) => setMealType(e.target.value as MealType)}
-                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                    >
-                      <option value="veg">Vegetarian</option>
-                      <option value="non-veg">Non-Vegetarian</option>
-                      <option value="vegan">Vegan</option>
-                      <option value="breakfast">Breakfast</option>
-                      <option value="lunch">Lunch</option>
-                      <option value="dinner">Dinner</option>
-                      <option value="snack">Snack</option>
-                      <option value="soup">Soup</option>
-                      <option value="salad">Salad</option>
-                      <option value="biriyani">Biriyani</option>
-                      <option value="main-meal">Main Meal</option>
-                    </select>
-                  </div>
+              {/* Cost */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Cost</label>
+                <input type="number" value={cost} onChange={e => setCost(Number(e.target.value))} className="w-full border rounded px-3 py-2"/>
+              </div>
 
-                  {/* Nutrition */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Nutrition (per serving)</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <input
-                          type="text"
-                          placeholder="Fat (g)"
-                          value={nutrition.fat || ""}
-                          onChange={(e) => setNutrition({ ...nutrition, fat: e.target.value })}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                        />
-                      </div>
-                      <div>
-                        <input
-                          type="text"
-                          placeholder="Carbs (g)"
-                          value={nutrition.carbohydrate || ""}
-                          onChange={(e) => setNutrition({ ...nutrition, carbohydrate: e.target.value })}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                        />
-                      </div>
-                      <div>
-                        <input
-                          type="text"
-                          placeholder="Protein (g)"
-                          value={nutrition.protein || ""}
-                          onChange={(e) => setNutrition({ ...nutrition, protein: e.target.value })}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                        />
-                      </div>
-                      <div>
-                        <input
-                          type="text"
-                          placeholder="Calories"
-                          value={nutrition.calories || ""}
-                          onChange={(e) => setNutrition({ ...nutrition, calories: e.target.value })}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                        />
-                      </div>
-                    </div>
-                  </div>
+              {/* Base Price */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Base Price</label>
+                <input type="number" value={basePrice} onChange={e => setBasePrice(Number(e.target.value))} className="w-full border rounded px-3 py-2"/>
+              </div>
 
-                  {/* Ingredients */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Ingredients</label>
-                    <div className="space-y-2">
-                      {ingredients.map((ing, i) => (
-                        <div key={i} className="flex gap-2">
-                          <input
-                            type="text"
-                            value={ing}
-                            onChange={(e) => updateIngredient(e.target.value, i)}
-                            placeholder={`Ingredient ${i + 1}`}
-                            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeIngredient(i)}
-                            className="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={addIngredient}
-                        className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors text-sm font-medium"
-                      >
-                        + Add Ingredient
-                      </button>
-                    </div>
-                  </div>
+              {/* Meal Type */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Meal Type</label>
+                <select value={mealType} onChange={(e)=>setMealType(e.target.value as MealType)} className="w-full border rounded px-3 py-2">
+                  <option value="veg">Vegetarian</option>
+                  <option value="non-veg">Non-Vegetarian</option>
+                  <option value="vegan">Vegan</option>
+                </select>
+              </div>
 
-                  {/* Available Dates */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Available Dates</label>
-                    <div className="space-y-2">
-                      {availableDates.map((date, i) => (
-                        <div key={i} className="flex gap-2">
-                          <input
-                            type="date"
-                            value={date}
-                            onChange={(e) => updateDate(e.target.value, i)}
-                            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeDate(i)}
-                            className="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={addDate}
-                        className="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors text-sm font-medium"
-                      >
-                        + Add Date
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Image Upload */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Product Image</label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => e.target.files && setImage(e.target.files[0])}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-colors"
-                    />
-                  </div>
+              {/* Category radios */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Category</label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    "diet",
+                    "bodybuilding",
+                    "yoga",
+                    "wellness",
+                    "vegan diet",
+                    "healthy food",
+                    "keto diet",
+                    "intermittent fasting",
+                    "weight loss",
+                    "strength training",
+                    "cardio",
+                    "pilates",
+                    "meditation",
+                  ].map(cat => (
+                    <label key={cat} className="flex items-center gap-1">
+                      <input type="radio" value={cat} checked={category===cat} onChange={()=>setCategory(cat as ProductCategory)} className="accent-blue-600"/>
+                      {cat}
+                    </label>
+                  ))}
                 </div>
+              </div>
+
+              {/* Ingredients */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Ingredients</label>
+                {ingredients.map((ing,i)=>(
+                  <div key={i} className="flex gap-2 mb-1">
+                    <input type="text" value={ing} onChange={e=>updateIngredient(e.target.value,i)} className="flex-1 border rounded px-2 py-1"/>
+                    <button onClick={()=>removeIngredient(i)} className="text-red-600 font-bold px-2">X</button>
+                  </div>
+                ))}
+                <button onClick={addIngredient} className="text-blue-600 mt-1">+ Add Ingredient</button>
+              </div>
+
+              {/* Available Days */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Available Days</label>
+                <div className="flex gap-2 flex-wrap">
+                  {["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map(day => (
+                    <label key={day} className="flex items-center gap-1">
+                      <input type="checkbox" checked={availableDays.includes(day)} onChange={()=>toggleDay(day)}/>
+                      {day}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Image */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Image</label>
+                <input type="file" onChange={e=>setImage(e.target.files?.[0]||null)} />
               </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="flex justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
-              <button
-                onClick={closeModal}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors font-medium"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={isLoading || isLoading}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-              >
-                {isLoading ||isLoading ? (
-                  "Saving..."
-                ) : editingProduct ? (
-                  "Update Product"
-                ) : (
-                  "Add Product"
-                )}
-              </button>
+            <div className="flex justify-end gap-4 mt-4">
+              <button onClick={closeModal} className="px-4 py-2 border rounded">Cancel</button>
+              <button onClick={handleSubmit} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">{editingProduct?"Update":"Create"}</button>
             </div>
           </div>
         </div>

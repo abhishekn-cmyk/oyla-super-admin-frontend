@@ -2,6 +2,10 @@ import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "react-toastify";
 
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getSuperAdminPolicies, updateSuperAdminPolicies } from "../api/auth";
+import type { ISuperAdminPolicies } from "../types/auth";
+
 const API_URL = import.meta.env.VITE_API_URL;
 
 // --- Types ---
@@ -87,4 +91,31 @@ export const useUpdatePassword = (
 
 
 
+
+
+// --- Fetch SuperAdmin Policies ---
+export const useSuperAdminPolicies = (id: string) => {
+  return useQuery<ISuperAdminPolicies, Error>({
+    queryKey: ["superadmin-policies", id],
+    queryFn: () => getSuperAdminPolicies(id),
+  });
+};
+
+// --- Update SuperAdmin Policies ---
+export const useUpdateSuperAdminPolicies = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    ISuperAdminPolicies, // response type
+    Error,               // error type
+    { id: string; policies: ISuperAdminPolicies } // variables type
+  >({
+    mutationFn: ({ id, policies }) => updateSuperAdminPolicies(id, policies),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["superadmin-policies", variables.id],
+      });
+    },
+  });
+};
 
