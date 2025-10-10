@@ -1,10 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import type { IOrder, IOrderStats } from "../types/order";
-
+import { useState } from "react";
+import axios from "axios";
 const API_URL = import.meta.env.VITE_API_URL;
 
 const getAuthToken = () => localStorage.getItem("token");
+// In your useorder.ts file, add these hooks:
+
+
 
 // Fetch all daily orders
 export const fetchOrders = async (): Promise<IOrder[]> => {
@@ -120,7 +124,46 @@ export const useToggleOrderStatus = () => {
   });
 };
 
+export const useUpdateOrderStatus = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
+  const updateStatus = async (orderId: string, status: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await axios.patch(`${import.meta.env.VITE_API_URL}/order/order/${orderId}/status`, { status });
+      setLoading(false);
+      return res.data;
+    } catch (err: any) {
+      setLoading(false);
+      setError(err.response?.data?.message || "Something went wrong");
+      throw err;
+    }
+  };
+
+  return { updateStatus, loading, error };
+};
+export const useUpdatePaymentStatus = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const updatePayment = async (orderId: string, paymentStatus: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await axios.patch(`${import.meta.env.VITE_API_URL}/order/order/${orderId}/payment`, { paymentStatus });
+      setLoading(false);
+      return res.data;
+    } catch (err: any) {
+      setLoading(false);
+      setError(err.response?.data?.message || "Something went wrong");
+      throw err;
+    }
+  };
+
+  return { updatePayment, loading, error };
+};
 
 export const useDeleteOrder = () => {
   const queryClient = useQueryClient();

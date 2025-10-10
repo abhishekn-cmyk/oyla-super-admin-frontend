@@ -6,7 +6,7 @@ import {
   
   CreditCard,
   Layers,
-  Globe,
+  // Globe,
   Lock,
   Phone,
   Award,
@@ -100,7 +100,7 @@ export default function Sidebar() {
     { label: "Users", icon: <User size={20} />, href: "/users" },
     { label: "Carousel", icon: <GiCarousel size={20} />, href: "/carousel" },
     { label: "Success Stories", icon: <Award size={20} />, href: "/success" },
-    { label: "Language", icon: <Globe size={20} />, href: "/language" },
+    // { label: "Language", icon: <Globe size={20} />, href: "/language" },
     { label: "Freeze", icon: <Lock size={20} />, href: "/freeze" },
     { label: "Contact Us", icon: <Phone size={20} />, href: "/contact" },
     { label: "Subscription", icon: <CreditCard size={20} />, href: "/subscription" },

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Component } from "react";
 import { 
    ShoppingCart, DollarSign, Edit, Trash2, Eye,
   ChevronLeft, ChevronRight, Loader, Search, Filter, User, X, TrendingUp,
@@ -6,47 +6,61 @@ import {
 } from "lucide-react";
 
 import { 
-  useGetOrderStats, useToggleOrderStatus, useDeleteOrder 
+  useGetOrderStats,  
+  useDeleteOrder, 
+  useUpdateOrderStatus, 
+  useUpdatePaymentStatus
 } from "../../hooks/useorder";
 import type { IOrder, IOrderStats } from "../../types/order";
 import type { IMeal } from "../../types/order";
 import type { IProduct } from "../../types/product";
+import {toast} from "react-toastify"
 
-// Error Boundary Component
-const ErrorBoundary = ({ children }: { children: React.ReactNode }) => {
-  const [hasError, setHasError] = useState(false);
+// Proper Error Boundary Component
+class ErrorBoundary extends Component<{children: React.ReactNode}, {hasError: boolean}> {
+  constructor(props: {children: React.ReactNode}) {
+    super(props);
+    this.state = { hasError: false };
+  }
 
-  const handleReset = () => {
-    setHasError(false);
+  static getDerivedStateFromError(error: Error) {
+    console.log(error);
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('Error caught by boundary:', error, errorInfo);
+  }
+
+  handleReset = () => {
+    this.setState({ hasError: false });
     window.location.reload();
   };
 
-  if (hasError) {
-    return (
-      <div className="flex items-center justify-center p-8 text-red-500 min-h-64">
-        <div className="text-center">
-          <AlertCircle className="w-12 h-12 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold">Something went wrong</h3>
-          <p className="text-sm text-gray-600 mt-2">
-            There was an error loading the orders. Please try refreshing the page.
-          </p>
-          <button
-            onClick={handleReset}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Refresh Page
-          </button>
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex items-center justify-center p-8 text-red-500 min-h-64">
+          <div className="text-center">
+            <AlertCircle className="w-12 h-12 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold">Something went wrong</h3>
+            <p className="text-sm text-gray-600 mt-2">
+              There was an error loading the orders. Please try refreshing the page.
+            </p>
+            <button
+              onClick={this.handleReset}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Refresh Page
+            </button>
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  return (
-    <div onError={() => setHasError(true)}>
-      {children}
-    </div>
-  );
-};
+    return this.props.children;
+  }
+}
 
 // Status Cards Component
 const StatusCards = ({ stats }: { stats: IOrderStats | undefined }) => {
@@ -142,12 +156,125 @@ const StatusCards = ({ stats }: { stats: IOrderStats | undefined }) => {
   );
 };
 
+// Action Buttons Component with Status Menus
+const ActionButtons = ({ 
+  order, 
+  onView, 
+  onUpdateOrderStatus, 
+  onUpdatePaymentStatus, 
+  onDelete 
+}: { 
+  order: IOrder;
+  onView: (order: IOrder) => void;
+  onUpdateOrderStatus: (orderId: string, status: string) => void;
+  onUpdatePaymentStatus: (orderId: string, status: string) => void;
+  onDelete: (orderId: string) => void;
+}) => {
+  const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const [showPaymentMenu, setShowPaymentMenu] = useState(false);
+
+  const orderStatuses = [
+    'pending', 'confirmed', 'preparing', 'prepared', 
+    'dispatched', 'out_for_delivery', 'delivered', 
+    'delayed', 'cancelled', 'completed', 'scheduled', 'paid'
+  ];
+
+  const paymentStatuses = ['pending', 'paid', 'failed', 'delayed', 'refunded', 'processing'];
+
+  return (
+    <div className="flex items-center space-x-2">
+      <button
+        onClick={() => onView(order)}
+        className="text-blue-600 hover:text-blue-800 p-1 rounded transition-colors"
+        title="View Details"
+      >
+        <Eye size={16} />
+      </button>
+      
+      {/* Order Status Dropdown */}
+      <div className="relative">
+        <button
+          onClick={() => {
+            setShowStatusMenu(!showStatusMenu);
+            setShowPaymentMenu(false);
+          }}
+          className="text-green-600 hover:text-green-800 p-1 rounded transition-colors"
+          title="Update Order Status"
+        >
+          <Edit size={16} />
+        </button>
+        {showStatusMenu && (
+          <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+            <div className="py-1">
+              {orderStatuses.map(status => (
+                <button
+                  key={status}
+                  onClick={() => {
+                    onUpdateOrderStatus(order._id, status);
+                    setShowStatusMenu(false);
+                  }}
+                  className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 capitalize ${
+                    order.orderStatus === status ? 'font-bold text-green-700' : 'text-gray-700'
+                  }`}
+                >
+                  {status.replace(/_/g, ' ')}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Payment Status Dropdown */}
+      <div className="relative">
+        <button
+          onClick={() => {
+            setShowPaymentMenu(!showPaymentMenu);
+            setShowStatusMenu(false);
+          }}
+          className="text-purple-600 hover:text-purple-800 p-1 rounded transition-colors"
+          title="Update Payment Status"
+        >
+          <DollarSign size={16} />
+        </button>
+        {showPaymentMenu && (
+          <div className="absolute right-0 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+            <div className="py-1">
+              {paymentStatuses.map(status => (
+                <button
+                  key={status}
+                  onClick={() => {
+                    onUpdatePaymentStatus(order._id, status);
+                    setShowPaymentMenu(false);
+                  }}
+                  className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 capitalize ${
+                    order.paymentStatus === status ? 'font-bold text-purple-700' : 'text-gray-700'
+                  }`}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <button
+        onClick={() => onDelete(order._id)}
+        className="text-red-600 hover:text-red-800 p-1 rounded transition-colors"
+        title="Delete Order"
+      >
+        <Trash2 size={16} />
+      </button>
+    </div>
+  );
+};
+
 // Main Orders Component
 function OrdersContent() {
-  const { data: stats, isLoading: statsLoading, error } = useGetOrderStats();
-  const toggleStatusMutation = useToggleOrderStatus();
+  const { data: stats, isLoading: statsLoading, error, refetch } = useGetOrderStats();
   const deleteMutation = useDeleteOrder();
-
+  
   // Get orders from stats data
   const orders = stats?.allOrders || [];
   const isLoading = statsLoading;
@@ -159,15 +286,79 @@ function OrdersContent() {
   const [selectedOrder, setSelectedOrder] = useState<IOrder | null>(null);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "orders" | "analytics">("overview");
+const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
 
-  // Filter orders
+  // Use the mutations with proper refetching
+  const { updateStatus, loading: updatingOrder } = useUpdateOrderStatus();
+  const { updatePayment, loading: updatingPayment } = useUpdatePaymentStatus();
+
+  // IMPROVED: Status update handler with better refetching
+  const handleUpdateOrderStatus = async (orderId: string, orderStatus: string) => {
+    setUpdatingOrderId(orderId);
+    try {
+      console.log('Updating order:', orderId, 'to status:', orderStatus);
+      await updateStatus(orderId, orderStatus);
+      toast.success(`Order status updated to "${orderStatus.replace(/_/g, ' ')}" successfully!`);
+      
+      // Force refetch to get updated data
+      await refetch();
+      
+      // Close modal if open
+      if (showOrderModal) {
+        setShowOrderModal(false);
+        setSelectedOrder(null);
+      }
+    } catch (err: any) {
+      console.error('Update failed:', err);
+      toast.error(err.response?.data?.message || "Failed to update order status");
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  };
+
+  // IMPROVED: Payment status update handler with better refetching
+  const handleUpdatePaymentStatus = async (orderId: string, paymentStatus: string) => {
+    setUpdatingOrderId(orderId);
+    try {
+      console.log('Updating payment for order:', orderId, 'to status:', paymentStatus);
+      await updatePayment(orderId, paymentStatus);
+      toast.success(`Payment status updated to "${paymentStatus}" successfully!`);
+      
+      // Force refetch to get updated data
+      await refetch();
+      
+      // Close modal if open
+      if (showOrderModal) {
+        setShowOrderModal(false);
+        setSelectedOrder(null);
+      }
+    } catch (err: any) {
+      console.error('Payment update failed:', err);
+      toast.error(err.response?.data?.message || "Failed to update payment status");
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  };
+
+  const handleDeleteOrder = (orderId: string) => {
+    if (window.confirm("Are you sure you want to delete this order?")) {
+      deleteMutation.mutate(orderId, {
+        onSuccess: () => {
+          refetch(); // Refetch after deletion
+        }
+      });
+    }
+  };
+
+  // Filter orders - FIXED: Use orderStatus consistently
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
       order.userId?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.userId?.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order._id.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
+    // FIXED: Use orderStatus instead of status
+    const matchesStatus = statusFilter === "all" || order.orderStatus === statusFilter;
     
     return matchesSearch && matchesStatus;
   });
@@ -216,7 +407,9 @@ function OrdersContent() {
       pending: { color: "bg-gray-100 text-gray-800", label: "Pending" },
       paid: { color: "bg-green-100 text-green-800", label: "Paid" },
       failed: { color: "bg-red-100 text-red-800", label: "Failed" },
-      refunded: { color: "bg-yellow-100 text-yellow-800", label: "Refunded" }
+      refunded: { color: "bg-yellow-100 text-yellow-800", label: "Refunded" },
+      delayed: { color: "bg-red-100 text-red-800", label: "Delayed" },
+      processing: { color: "bg-blue-100 text-blue-800", label: "Processing" }
     };
     
     const config = paymentConfig[paymentStatus.toLowerCase() as keyof typeof paymentConfig] || paymentConfig.pending;
@@ -227,8 +420,6 @@ function OrdersContent() {
     );
   };
 
- 
-  
   // Total items
   const getTotalItems = (order: IOrder): number => {
     return order.meals?.length || 0;
@@ -293,16 +484,6 @@ function OrdersContent() {
     setShowOrderModal(true);
   };
 
-  const handleToggleStatus = (orderId: string) => {
-    toggleStatusMutation.mutate(orderId);
-  };
-  
-  const handleDeleteOrder = (orderId: string) => {
-    if (window.confirm("Are you sure you want to delete this order?")) {
-      deleteMutation.mutate(orderId);
-    }
-  };
-
   const totalOrder = stats
     ? Object.values(stats.statusCount || {}).reduce((sum, count) => sum + (count || 0), 0)
     : 0;
@@ -360,13 +541,13 @@ function OrdersContent() {
     const totalProfit = totalRevenue - totalCost;
     
     const statusDistribution = orders.reduce((acc, order) => {
-      const status = order.status || 'unknown';
+      const status = order.orderStatus || 'unknown';
       acc[status] = (acc[status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
     const paymentMethodDistribution = orders.reduce((acc, order) => {
-      const method = order.paymentMethod || 'unknown';
+      const method = order.payment?.gateway || 'unknown';
       acc[method] = (acc[method] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -397,7 +578,10 @@ function OrdersContent() {
         Error loading orders. Please try again later.
       </div>
     );
+
   }
+    const isTableLoading = isLoading || updatingOrder || updatingPayment;
+
 
   return (
     <div className="">
@@ -467,7 +651,9 @@ function OrdersContent() {
                 },
                 { 
                   title: "Total Revenue", 
-                  value: stats?.totalRevenue, 
+                  value: orders.reduce((total, order) => 
+                    total + order.meals.reduce((mealSum, meal) => mealSum + (meal.costPrice || 0), 0), 
+                  0),
                   icon: <DollarSign className="w-6 h-6 text-green-600"/>, 
                   color: "bg-green-50 border-green-200", 
                   desc: "Lifetime revenue", 
@@ -513,68 +699,69 @@ function OrdersContent() {
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Order Status Distribution</h2>
               <StatusCards stats={stats} />
             </div>
-
-          
           </div>
         )}
 
         {activeTab === "orders" && (
           <>
             {/* Controls */}
-           <div className="flex flex-wrap justify-between items-center gap-4 mb-6 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-  {/* Left: Search + Status */}
-  <div className="flex items-center gap-4 flex-1 min-w-[280px]">
-    {/* Search */}
-    <div className="relative flex-1 min-w-[200px]">
-      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-      <input 
-        type="text" 
-        placeholder="Search orders..." 
-        value={searchTerm}
-        onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-        className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
-      />
-    </div>
+            <div className="flex flex-wrap justify-between items-center gap-4 mb-6 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              {/* Left: Search + Status */}
+              <div className="flex items-center gap-4 flex-1 min-w-[280px]">
+                {/* Search */}
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input 
+                    type="text" 
+                    placeholder="Search orders..." 
+                    value={searchTerm}
+                    onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
+                  />
+                </div>
 
-    {/* Status Filter */}
-    <div className="flex items-center gap-2 min-w-[150px]">
-      <Filter className="text-gray-400 w-4 h-4 flex-shrink-0" />
-      <select 
-        value={statusFilter} 
-        onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-        className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
-      >
-        <option value="all">All Status</option>
-        <option value="scheduled">Scheduled</option>
-        <option value="prepared">Prepared</option>
-        <option value="dispatched">Dispatched</option>
-        <option value="delivered">Delivered</option>
-        <option value="delayed">Delayed</option>
-        <option value="pending">Pending</option>
-        <option value="completed">Completed</option>
-        <option value="paid">Paid</option>
-      </select>
-    </div>
-  </div>
+                {/* Status Filter */}
+                <div className="flex items-center gap-2 min-w-[150px]">
+                  <Filter className="text-gray-400 w-4 h-4 flex-shrink-0" />
+                  <select 
+                    value={statusFilter} 
+                    onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="preparing">Preparing</option>
+                    <option value="prepared">Prepared</option>
+                    <option value="dispatched">Dispatched</option>
+                    <option value="out_for_delivery">Out for Delivery</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="scheduled">Scheduled</option>
+                    <option value="delayed">Delayed</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="completed">Completed</option>
+                    <option value="paid">Paid</option>
+                  </select>
+                </div>
+              </div>
 
-  {/* Right: Items per page */}
-  <div className="flex items-center gap-3 min-w-[180px] justify-end">
-    <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Show:</label>
-    <select 
-      value={itemsPerPage} 
-      onChange={handleItemsPerPageChange} 
-      className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-20"
-    >
-      <option value="5">5</option>
-      <option value="10">10</option>
-      <option value="20">20</option>
-      <option value="50">50</option>
-      <option value="100">100</option>
-    </select>
-    <span className="text-sm text-gray-600 whitespace-nowrap">entries</span>
-  </div>
-</div>
-
+              {/* Right: Items per page */}
+              <div className="flex items-center gap-3 min-w-[180px] justify-end">
+                <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Show:</label>
+                <select 
+                  value={itemsPerPage} 
+                  onChange={handleItemsPerPageChange} 
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-20"
+                >
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="20">20</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+                <span className="text-sm text-gray-600 whitespace-nowrap">entries</span>
+              </div>
+            </div>
 
             {/* Orders Table */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -593,12 +780,14 @@ function OrdersContent() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {isLoading ? (
+                    {isTableLoading ? (
                       <tr>
                         <td colSpan={9} className="px-4 py-8 text-center">
                           <div className="flex justify-center items-center">
                             <Loader className="w-6 h-6 animate-spin text-blue-600" />
-                            <span className="ml-2 text-gray-600">Loading orders...</span>
+                            <span className="ml-2 text-gray-600">
+                              {updatingOrder || updatingPayment ? "Updating orders..." : "Loading orders..."}
+                            </span>
                           </div>
                         </td>
                       </tr>
@@ -612,10 +801,15 @@ function OrdersContent() {
                       currentOrders.map((order) => {
                         if (!order) return null;
                         
+                        const isUpdating = updatingOrderId === order._id;
+                        
                         return (
-                          <tr key={order._id} className="hover:bg-gray-50">
+                          <tr key={order._id} className={`hover:bg-gray-50 ${isUpdating ? 'opacity-60' : ''}`}>
                             <td className="px-4 py-3 text-sm font-medium text-gray-900">
                               {order._id?.substring(0, 8) || 'Unknown'}...
+                              {isUpdating && (
+                                <Loader className="w-3 h-3 animate-spin text-blue-600 ml-1 inline" />
+                              )}
                             </td>
                             <td className="px-4 py-3">
                               <div className="flex items-center">
@@ -642,7 +836,7 @@ function OrdersContent() {
                               </span>
                             </td>
                             <td className="px-4 py-3">
-                              {getStatusBadge(order.status)}
+                              {getStatusBadge(order.orderStatus)}
                             </td>
                             <td className="px-4 py-3">
                               <div className="flex flex-col gap-1">
@@ -653,29 +847,13 @@ function OrdersContent() {
                               {formatDate(order.createdAt)}
                             </td>
                             <td className="px-4 py-3">
-                              <div className="flex items-center space-x-2">
-                                <button
-                                  onClick={() => handleViewOrder(order)}
-                                  className="text-blue-600 hover:text-blue-800 p-1 rounded transition-colors"
-                                  title="View Details"
-                                >
-                                  <Eye size={16} />
-                                </button>
-                                <button
-                                  onClick={() => handleToggleStatus(order._id)}
-                                  className="text-green-600 hover:text-green-800 p-1 rounded transition-colors"
-                                  title="Update Status"
-                                >
-                                  <Edit size={16} />
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteOrder(order._id)}
-                                  className="text-red-600 hover:text-red-800 p-1 rounded transition-colors"
-                                  title="Delete Order"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              </div>
+                              <ActionButtons 
+                                order={order}
+                                onView={handleViewOrder}
+                                onUpdateOrderStatus={handleUpdateOrderStatus}
+                                onUpdatePaymentStatus={handleUpdatePaymentStatus}
+                                onDelete={handleDeleteOrder}
+                              />
                             </td>
                           </tr>
                         );
@@ -781,9 +959,10 @@ function OrdersContent() {
                 <div>
                   <p className="text-sm font-medium text-purple-600">Profit Margin</p>
                   <p className="text-2xl font-bold text-gray-900 mt-2">
-                    {analyticsData.totalRevenue > 0
-                      ? `${((analyticsData.totalProfit / analyticsData.totalRevenue) * 100).toFixed(1)}%`
-                      : "0%"}
+                    {analyticsData.totalRevenue > 0 
+                      ? Math.min(100, Math.abs(analyticsData.totalProfit / analyticsData.totalRevenue) * 100).toFixed(2)
+                      : 0
+                    }%
                   </p>
                 </div>
                 <BarChart3 className="w-8 h-8 text-purple-600" />
@@ -802,7 +981,7 @@ function OrdersContent() {
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-gray-900">{count}</span>
                         <span className="text-xs text-gray-500">
-                          ({((count / analyticsData.totalOrders) * 100).toFixed(1)}%)
+                          ({analyticsData.totalOrders > 0 ? ((count / analyticsData.totalOrders) * 100).toFixed(1) : 0}%)
                         </span>
                       </div>
                     </div>
@@ -820,7 +999,7 @@ function OrdersContent() {
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-gray-900">{count}</span>
                         <span className="text-xs text-gray-500">
-                          ({((count / analyticsData.totalOrders) * 100).toFixed(1)}%)
+                          ({analyticsData.totalOrders > 0 ? ((count / analyticsData.totalOrders) * 100).toFixed(1) : 0}%)
                         </span>
                       </div>
                     </div>
@@ -828,9 +1007,6 @@ function OrdersContent() {
                 </div>
               </div>
             </div>
-
-            {/* Daily Orders */}
-           
           </div>
         )}
 
@@ -860,14 +1036,14 @@ function OrdersContent() {
                         {selectedOrder.userId?.username || 'Unknown'} ({selectedOrder.userId?.email || 'No email'})
                       </p>
                     </div>
+                    {/* FIXED: Use orderStatus consistently */}
                     <div>
                       <label className="text-xs sm:text-sm font-medium text-gray-600">Status</label>
-                      <div className="mt-1">{getStatusBadge(selectedOrder.status)}</div>
+                      <div className="mt-1">{getStatusBadge(selectedOrder.orderStatus)}</div>
                     </div>
                     <div>
                       <label className="text-xs sm:text-sm font-medium text-gray-600">Payment</label>
                       <div className="mt-1 space-y-1">
-                       
                         <div>{getPaymentBadge(selectedOrder.paymentStatus)}</div>
                       </div>
                     </div>
@@ -965,7 +1141,7 @@ function OrdersContent() {
                     Close
                   </button>
                   <button 
-                    onClick={() => selectedOrder && handleToggleStatus(selectedOrder._id)}
+                    onClick={() => selectedOrder && handleUpdateOrderStatus(selectedOrder._id, 'completed')}
                     className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
                   >
                     Update Status
