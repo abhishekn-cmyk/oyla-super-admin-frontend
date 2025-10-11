@@ -43,10 +43,12 @@ export function useNotificationBadge() {
     }
 
     const handleNew = (newNotification: NotificationType) => {
+      console.log(newNotification);
       setUnreadCount(prev => prev + 1);
     };
 
     const handleRead = ({ notificationId }: { notificationId: string }) => {
+      console.log(notificationId);
       setUnreadCount(prev => Math.max(prev - 1, 0));
     };
 
