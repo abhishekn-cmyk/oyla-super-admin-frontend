@@ -97,7 +97,9 @@ export interface RevenueReport {
   deliveryPartnerAnalytics:PartnerAnalytics[];
 }
 
-
+export type DeliveryDelayReport = {
+  delayedOrders: DeliveryDelay[];
+};
 const getAuthHeader = () => {
   const token = localStorage.getItem("token"); // adjust key if needed
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -111,11 +113,10 @@ export const fetchRevenueReport = async (): Promise<RevenueReport> => {
   return data;
 };
 
-export const fetchDeliveryDelayReport = async (): Promise<DeliveryDelay> => {
+export const fetchDeliveryDelayReport = async (): Promise<DeliveryDelayReport> => {
   const { data } = await axios.get(`${API_URL}/delivery-delays`, {
     headers: getAuthHeader(),
   });
-  console.log(data);
-
   return data;
 };
+
