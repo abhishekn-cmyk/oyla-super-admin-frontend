@@ -109,6 +109,7 @@ export default function Product() {
     formData.append("features", features);
     formData.append("mealType", mealType);
     formData.append("nutrition", JSON.stringify(nutrition));
+
     formData.append("ingredients", JSON.stringify(ingredients));
     formData.append("availableDays", JSON.stringify(availableDays));
     if (image) formData.append("image", image);
@@ -295,6 +296,63 @@ export default function Product() {
                   ))}
                 </div>
               </div>
+              {/* Nutrition */}
+{/* Nutrition */}
+<div>
+  <label className="block text-sm font-medium mb-1">Nutrition</label>
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+    <div>
+      <label className="block text-xs text-gray-500 mb-1">Calories</label>
+      <input
+        type="text"
+        placeholder="e.g. 200 kcal"
+        value={nutrition.calories || ""}
+        onChange={(e) =>
+          setNutrition({ ...nutrition, calories: e.target.value })
+        }
+        className="w-full border rounded px-2 py-1"
+      />
+    </div>
+    <div>
+      <label className="block text-xs text-gray-500 mb-1">Protein</label>
+      <input
+        type="text"
+        placeholder="e.g. 10g"
+        value={nutrition.protein || ""}
+        onChange={(e) =>
+          setNutrition({ ...nutrition, protein: e.target.value })
+        }
+        className="w-full border rounded px-2 py-1"
+      />
+    </div>
+    <div>
+      <label className="block text-xs text-gray-500 mb-1">Carbohydrate</label>
+      <input
+        type="text"
+        placeholder="e.g. 20g"
+        value={nutrition.carbohydrate || ""}
+        onChange={(e) =>
+          setNutrition({ ...nutrition, carbohydrate: e.target.value })
+        }
+        className="w-full border rounded px-2 py-1"
+      />
+    </div>
+    <div>
+      <label className="block text-xs text-gray-500 mb-1">Fat</label>
+      <input
+        type="text"
+        placeholder="e.g. 5g"
+        value={nutrition.fat || ""}
+        onChange={(e) =>
+          setNutrition({ ...nutrition, fat: e.target.value })
+        }
+        className="w-full border rounded px-2 py-1"
+      />
+    </div>
+  </div>
+</div>
+
+
 
               {/* Image */}
               <div>
