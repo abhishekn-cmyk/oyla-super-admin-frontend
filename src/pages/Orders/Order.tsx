@@ -2,9 +2,11 @@ import { useState, Component } from "react";
 import { 
    ShoppingCart, DollarSign, Edit, Trash2, Eye,
   ChevronLeft, ChevronRight, Loader, Search, Filter, User, X, TrendingUp,
-  BarChart3, List, AlertCircle, Package, Clock, CheckCircle, XCircle
+  BarChart3, List, AlertCircle, Package, Clock, CheckCircle, XCircle,
+  Download
 } from "lucide-react";
-
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 import { 
   useGetOrderStats,  
   useDeleteOrder, 
@@ -355,7 +357,7 @@ const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
     const matchesSearch =
       order.userId?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.userId?.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order._id.toLowerCase().includes(searchTerm.toLowerCase());
+      order.orderStatus.toLowerCase().includes(searchTerm.toLowerCase()) || order._id.includes(searchTerm.toLowerCase());
     
     // FIXED: Use orderStatus instead of status
     const matchesStatus = statusFilter === "all" || order.orderStatus === statusFilter;
@@ -454,6 +456,46 @@ const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
       return sum + mealPrice;
     }, 0) || 0;
   };
+const exportToCSV = (orders: any[]) => {
+  const data = orders.map(order => ({
+    "Order ID": order._id,
+    "Customer": order.userId?.username || 'Unknown',
+    "Email": order.userId?.email || 'No email',
+    "Items": getTotalItems(order),
+    "Total": formatCurrency(getTotalPrice(order)),
+    "Profit": formatCurrency(getProfit(order)),
+    "Status": order.orderStatus,
+    "Payment": order.paymentStatus,
+    "Date": formatDate(order.createdAt),
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Orders");
+
+  // Export XLSX
+  XLSX.writeFile(workbook, `orders_${new Date().toISOString().slice(0,10)}.xlsx`);
+};
+
+const exportToCSVFile = (orders: any[]) => {
+  const data = orders.map(order => ({
+    "Order ID": order._id,
+    "Customer": order.userId?.username || 'Unknown',
+    "Email": order.userId?.email || 'No email',
+    "Items": getTotalItems(order),
+    "Total": formatCurrency(getTotalPrice(order)),
+    "Profit": formatCurrency(getProfit(order)),
+    "Status": order.orderStatus,
+    "Payment": order.paymentStatus,
+    "Date": formatDate(order.createdAt),
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  const csvOutput = XLSX.utils.sheet_to_csv(worksheet);
+
+  const blob = new Blob([csvOutput], { type: 'text/csv;charset=utf-8;' });
+  saveAs(blob, `orders_${new Date().toISOString().slice(0,10)}.csv`);
+};
 
   // Calculate profit - use order.profit if available, otherwise calculate
   const getProfit = (order: IOrder): number => {
@@ -594,47 +636,73 @@ const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
 
         {/* Tabs Navigation */}
         <div className="mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
-              <button
-                onClick={() => setActiveTab("overview")}
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-                  activeTab === "overview"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                <BarChart3 size={18} />
-                Overview
-              </button>
-              <button
-                onClick={() => setActiveTab("orders")}
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-                  activeTab === "orders"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                <List size={18} />
-                Orders List
-                <span className="bg-gray-100 text-gray-900 ml-2 py-0.5 px-2 rounded-full text-xs">
-                  {orders.length}
-                </span>
-              </button>
-              <button
-                onClick={() => setActiveTab("analytics")}
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
-                  activeTab === "analytics"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                <TrendingUp size={18} />
-                Analytics
-              </button>
-            </nav>
-          </div>
-        </div>
+  <div className="border-b border-gray-200 flex items-center justify-between">
+    {/* Tabs */}
+    <nav className="-mb-px flex space-x-8">
+      <button
+        onClick={() => setActiveTab("overview")}
+        className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+          activeTab === "overview"
+            ? "border-blue-500 text-blue-600"
+            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+        }`}
+      >
+        <BarChart3 size={18} />
+        Overview
+      </button>
+
+      <button
+        onClick={() => setActiveTab("orders")}
+        className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+          activeTab === "orders"
+            ? "border-blue-500 text-blue-600"
+            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+        }`}
+      >
+        <List size={18} />
+        Orders List
+        <span className="bg-gray-100 text-gray-900 ml-2 py-0.5 px-2 rounded-full text-xs">
+          {orders.length}
+        </span>
+      </button>
+
+      <button
+        onClick={() => setActiveTab("analytics")}
+        className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2 ${
+          activeTab === "analytics"
+            ? "border-blue-500 text-blue-600"
+            : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+        }`}
+      >
+        <TrendingUp size={18} />
+        Analytics
+      </button>
+    </nav>
+
+    {/* Prev / Next Buttons */}
+    <div className="flex gap-2">
+      <button
+        onClick={() => {
+          if (activeTab === "analytics") setActiveTab("orders");
+          else if (activeTab === "orders") setActiveTab("overview");
+        }}
+        className="px-3 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+      >
+        Prev
+      </button>
+      <button
+        onClick={() => {
+          if (activeTab === "overview") setActiveTab("orders");
+          else if (activeTab === "orders") setActiveTab("analytics");
+        }}
+        className="px-3 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+      >
+        Next
+      </button>
+    </div>
+  </div>
+</div>
+
 
         {/* Tab Content */}
         {activeTab === "overview" && (
@@ -762,6 +830,25 @@ const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
                 <span className="text-sm text-gray-600 whitespace-nowrap">entries</span>
               </div>
             </div>
+            <div className="flex gap-2 mb-2 justify-end">
+  <button
+    onClick={() => exportToCSV(currentOrders)}
+    className="flex items-center gap-2 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+  >
+    <Download className="w-4 h-4" />
+    <span>Export XLSX</span>
+  </button>
+
+  <button
+    onClick={() => exportToCSVFile(currentOrders)}
+    className="flex items-center gap-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+  >
+    <Download className="w-4 h-4" />
+    <span>Export CSV</span>
+  </button>
+</div>
+
+
 
             {/* Orders Table */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -937,7 +1024,9 @@ const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
                 <div>
                   <p className="text-sm font-medium text-blue-600">Total Revenue</p>
                   <p className="text-2xl font-bold text-gray-900 mt-2">
-                    {formatCurrency(analyticsData.totalRevenue)}
+                    {formatCurrency(orders.reduce((total, order) => 
+                    total + order.meals.reduce((mealSum, meal) => mealSum + (meal.costPrice || 0), 0), 
+                  0),)}
                   </p>
                 </div>
                 <DollarSign className="w-8 h-8 text-blue-600" />
@@ -970,7 +1059,7 @@ const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
             </div>
 
             {/* Status & Payment Distribution */}
-            <div className="grid grid-cols-4 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-2 gap-6">
               {/* Order Status */}
               <div className="bg-gray-50 rounded-xl p-6">
                 <h3 className="text-lg font-semibold mb-4">Order Status Distribution</h3>
@@ -995,7 +1084,7 @@ const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
                 <div className="space-y-3">
                   {Object.entries(analyticsData.paymentMethodDistribution).map(([method, count]) => (
                     <div key={method} className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-600 capitalize">{method}</span>
+                      <span className="text-sm font-medium text-gray-600 capitalize">total orders</span>
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-gray-900">{count}</span>
                         <span className="text-xs text-gray-500">
