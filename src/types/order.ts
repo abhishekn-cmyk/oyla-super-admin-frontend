@@ -121,7 +121,8 @@ export interface IOrderStats {
  dailyOrders: IDailyOrderStats[]; // FIXED: This should be IDailyOrderStats[], not IOrder[]
   count:number;
   revenue:number;
-  allOrders: IOrder[]; // The actual orders list
+  
+  allOrders: IOrder[]; // <-- Add this line
 }
 
 // For API response structure
